@@ -1,0 +1,41 @@
+name: Watch SEC Form 4 Filings
+
+on:
+  schedule:
+    # Every 30 min, 13:00-21:30 UTC = ~9:00am-5:30pm ET, Mon-Fri.
+    # (GitHub Actions cron is UTC and doesn't shift for daylight saving --
+    # adjust these hours by 1 if you want strict market-hours coverage.)
+    - cron: "*/30 13-21 * * 1-5"
+  workflow_dispatch: {}  # allows manual "Run workflow" button for testing
+
+permissions:
+  contents: write  # needed to commit updated state files back to the repo
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run watcher
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: python watch_filings.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name "secwatch-bot"
+          git config user.email "actions@github.com"
+          git add state/
+          git diff --cached --quiet || git commit -m "Update state [skip ci]"
+          git push
