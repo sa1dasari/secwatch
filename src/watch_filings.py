@@ -23,12 +23,13 @@ import telegram_client
 import state_store
 
 
-def process_entry(entry, seen):
+def process_entry(entry, seen, stats):
     if entry["form_type"] != "4":
         return
     if entry["accession_no"] in seen:
         return
     seen.add(entry["accession_no"])
+    stats["new_form4s"] += 1
 
     if not entry["index_url"] or not entry["cik"]:
         return
@@ -37,6 +38,7 @@ def process_entry(entry, seen):
     sector_name = config.get_sector_name(sic_code)
     if sector_name is None:
         return
+    stats["in_target_sector"] += 1
 
     xml_url = sec_client.get_form4_xml_url(entry["index_url"])
     if not xml_url:
@@ -49,12 +51,22 @@ def process_entry(entry, seen):
         return
 
     for tx in transactions:
+        stats["transactions_seen"] += 1
         if tx["transaction_code"] not in config.TARGET_TRANSACTION_CODES:
             continue
+        stats["right_transaction_code"] += 1
         if tx["total_value"] < config.MIN_TRANSACTION_VALUE:
+            # Log near-misses at reduced detail so you can see how close you're
+            # getting without spamming the log.
+            print(
+                f"[near-miss] {sector_name}: {tx['owner_name']} bought "
+                f"${tx['total_value']:,.0f} of {tx['ticker']} "
+                f"(below ${config.MIN_TRANSACTION_VALUE:,.0f} threshold)"
+            )
             continue
+        stats["above_threshold"] += 1
 
-        print(f"[match] {tx['owner_name']} bought ${tx['total_value']:,.0f} of {tx['ticker']}")
+        print(f"[match] {sector_name}: {tx['owner_name']} bought ${tx['total_value']:,.0f} of {tx['ticker']}")
 
         try:
             summary = claude_client.summarize_transaction(tx, sector_name, sic_description)
@@ -95,14 +107,31 @@ def main():
 
     print(f"[info] Fetched {len(entries)} recent filings from EDGAR.")
 
+    stats = {
+        "new_form4s": 0,          # new (not-yet-seen) Form 4s this run
+        "in_target_sector": 0,    # ...of those, how many are in a tracked sector
+        "transactions_seen": 0,   # ...total individual transactions inspected
+        "right_transaction_code": 0,  # ...how many were purchases (code P)
+        "above_threshold": 0,     # ...how many cleared the dollar threshold (= matches)
+    }
+
     for entry in entries:
         try:
-            process_entry(entry, seen)
+            process_entry(entry, seen, stats)
         except Exception as e:
             print(f"[warn] Error processing entry {entry.get('accession_no')}: {e}")
             traceback.print_exc()
 
     state_store.save_seen(seen)
+
+    print(
+        "[funnel] "
+        f"new Form 4s: {stats['new_form4s']} -> "
+        f"in tracked sectors: {stats['in_target_sector']} -> "
+        f"transactions checked: {stats['transactions_seen']} -> "
+        f"were purchases (code P): {stats['right_transaction_code']} -> "
+        f"above ${config.MIN_TRANSACTION_VALUE:,.0f} (= alerts sent): {stats['above_threshold']}"
+    )
     print("[info] Run complete.")
 
 
