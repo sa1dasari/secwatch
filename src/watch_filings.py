@@ -34,7 +34,8 @@ def process_entry(entry, seen):
         return
 
     sic_description, sic_code = sec_client.get_sic_code(entry["cik"])
-    if sic_code not in config.TARGET_SIC_CODES:
+    sector_name = config.get_sector_name(sic_code)
+    if sector_name is None:
         return
 
     xml_url = sec_client.get_form4_xml_url(entry["index_url"])
@@ -56,7 +57,7 @@ def process_entry(entry, seen):
         print(f"[match] {tx['owner_name']} bought ${tx['total_value']:,.0f} of {tx['ticker']}")
 
         try:
-            summary = claude_client.summarize_transaction(tx, sic_description)
+            summary = claude_client.summarize_transaction(tx, sector_name, sic_description)
         except Exception as e:
             print(f"[warn] Claude summarization failed, using raw fallback: {e}")
             summary = (
@@ -65,11 +66,15 @@ def process_entry(entry, seen):
                 f"total ${tx['total_value']:,.0f}, on {tx['transaction_date']}."
             )
 
-        alert_text = f"🩺 Insider Buy Alert\n\n{summary}\n\nFiling: {entry['index_url']}"
+        alert_text = (
+            f"🔔 Insider Buy Alert -- {sector_name}\n\n"
+            f"{summary}\n\nFiling: {entry['index_url']}"
+        )
         telegram_client.send_alert(alert_text)
 
         state_store.append_to_digest_queue(
             {
+                "sector": sector_name,
                 "summary": summary,
                 "ticker": tx["ticker"],
                 "issuer_name": tx["issuer_name"],
