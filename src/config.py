@@ -19,11 +19,31 @@ EDGAR_ATOM_FEED = (
 )
 SUBMISSIONS_API = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 
-# --- Niche filter: small-cap biotech ---
-# SIC codes: 2836 (Biological Products), 8731 (Commercial Physical & Biological
-# Research), 2834 (Pharmaceutical Preparations), 8071 (Medical Labs).
-# Trim this list to narrow further (e.g. only 2836 + 8731 for "pure" biotech).
-TARGET_SIC_CODES = {"2836", "8731", "2834", "8071"}
+# --- Niche filter: named sector groups ---
+# Each key is a human-readable sector label used in alerts/emails.
+# Each value is the set of SIC codes that count as "in" that sector.
+# Add/remove sectors or codes here -- nothing else in the pipeline needs
+# to change. A filing only needs to match ONE sector to qualify.
+SECTOR_GROUPS = {
+    "Biotech / Pharma": {"2836", "8731", "2834", "8071"},
+    "Semiconductors / Hardware": {"3674", "3559", "3827", "3576"},
+    "Software / Tech": {"7372", "7371", "7379", "7370"},
+    "Energy / Cleantech": {"2911", "1311", "4911", "3674"},  # note: 3674 also used for solar wafer mfrs
+    "Financial Services": {"6199", "6211", "6021", "6770"},
+    "Consumer / Retail": {"5961", "5731", "2300", "5411"},
+}
+
+# Flat set of every SIC code across all sectors -- used for the initial filter.
+TARGET_SIC_CODES = {code for codes in SECTOR_GROUPS.values() for code in codes}
+
+
+def get_sector_name(sic_code):
+    """Return the human-readable sector label for a SIC code, or None if
+    it doesn't match any configured sector."""
+    for sector_name, codes in SECTOR_GROUPS.items():
+        if sic_code in codes:
+            return sector_name
+    return None
 
 # Small-cap ceiling in USD. Market cap isn't in the Form 4 itself, so this is
 # checked separately (see market_cap.py) using shares outstanding * price.
