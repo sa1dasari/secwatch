@@ -41,7 +41,7 @@ MIN_TRANSACTION_VALUE = 100_000  # $100k
 POLL_LOOKBACK_MINUTES = 45  # slightly wider than the cron interval to avoid gaps
 
 # --- State files (persisted in the repo between Action runs) ---
-STATE_DIR = os.path.join(os.path.dirname(__file__), "state")
+STATE_DIR = os.path.join(os.path.dirname(__file__), "..", "state")
 SEEN_FILE = os.path.join(STATE_DIR, "seen.json")
 DIGEST_QUEUE_FILE = os.path.join(STATE_DIR, "digest_queue.json")
 

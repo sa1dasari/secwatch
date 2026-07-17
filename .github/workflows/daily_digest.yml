@@ -30,7 +30,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           DIGEST_FROM: ${{ secrets.DIGEST_FROM }}
           DIGEST_TO: ${{ secrets.DIGEST_TO }}
-        run: python send_digest.py
+        run: python src/send_digest.py
 
       - name: Commit cleared queue
         run: |
