@@ -1,0 +1,41 @@
+name: Send Daily Insider Buy Digest
+
+on:
+  schedule:
+    # 21:45 UTC = ~5:45pm ET, Mon-Fri (after market close + last watch.yml run)
+    - cron: "45 21 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send digest
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DIGEST_FROM: ${{ secrets.DIGEST_FROM }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
+        run: python send_digest.py
+
+      - name: Commit cleared queue
+        run: |
+          git config user.name "secwatch-bot"
+          git config user.email "actions@github.com"
+          git add state/
+          git diff --cached --quiet || git commit -m "Clear digest queue [skip ci]"
+          git push
