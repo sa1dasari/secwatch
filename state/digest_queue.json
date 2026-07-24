@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "sector": "Financial Services",
+    "summary": "Robert A. McCabe Jr., Chief Banking Officer of Pinnacle Financial Partners (PNFP), a national commercial bank, purchased 10,013 shares at $99.90 for a total of roughly $1.0 million on July 24, 2026. The purchase brings his holdings to 324,233 shares, a stake large enough that the fresh buy stands out mainly for its round, seven-figure size rather than as a shift in position. Insider purchases of this magnitude can sometimes reflect executive confidence in the bank's near-term outlook, though context on prior trading activity was not available for this filing.",
+    "ticker": "PNFP",
+    "issuer_name": "Pinnacle Financial Partners, Inc.",
+    "total_value": 1000298.7,
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/2082866/000107942826000004/0001079428-26-000004-index.htm"
+  }
+]
