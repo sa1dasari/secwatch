@@ -2,8 +2,8 @@ name: Send Daily Insider Buy Digest
 
 on:
   schedule:
-    # 21:45 UTC = ~5:45pm ET, Mon-Fri (after market close + last watch.yml run)
-    - cron: "45 21 * * 1-5"
+    # # 21:45 UTC = ~5:45pm ET, Mon-Fri (after market close + last watch.yml run)
+    # - cron: "45 21 * * 1-5"
   workflow_dispatch: {}
 
 permissions:
